@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "moving_average.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +31,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define NUM_READING 1000
 
 /* USER CODE END PD */
 
@@ -79,6 +81,18 @@ uint32_t masks[] = {
 		  12,//11
 };
 
+/*uint16_t idx=0;
+
+uint16_t adc_readings[NUM_READING]={0};
+uint16_t moving_average;*/
+
+
+volatile uint32_t ADCValue = 0;
+uint32_t ADCValueFiltered = 0;
+FilterTypeDef filterStruct;
+
+
+
 void reset_inputs(){
 	for(int i=0;i<12;i++){
 		inputs[i] = 0;
@@ -89,7 +103,7 @@ void read_inputs(){
 	uwTick = 0;
 
 
-	while(uwTick <1000){
+	while(uwTick <4){
 		uint32_t value =  (GPIOB->IDR & 0b0001111011111111);
 
 		for(int i=0;i<12;i++){
@@ -118,6 +132,18 @@ uint8_t find_max(){
 	return c;
 }
 
+/*uint8_t calculate_average(uint8_t current_position) {
+    uint16_t oldest_value = adc_readings[idx]; //grab the value we're about to overwrite
+    uint16_t new_value = (uint16_t) current_position; //read whatever register you need to get the ADC reading
+    moving_average = ((100 * moving_average) - oldest_value + new_value) / 100; //this is the shortcut trick!
+    adc_readings[idx] = new_value;
+    if (idx++ > NUM_READING){
+    	idx = 0;
+    }
+    return (uint8_t) moving_average;
+}
+*/
+
 
 /* USER CODE END 0 */
 
@@ -128,7 +154,10 @@ uint8_t find_max(){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	/*for(int i = 0;i < NUM_READING; i ++){
+		adc_readings[i] = 0;
+	}*/
+	Moving_Average_Init(&filterStruct);
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -172,8 +201,11 @@ int main(void)
   {
 	  	reset_inputs();
 	  	read_inputs();
-	  	uint8_t max_position = find_max();
-	  	result[0] = max_position;
+
+	  	//uint8_t current_average_position = calculate_average(current_position);
+	  	uint8_t current_position = find_max();
+	  	uint8_t current_average_position = (uint8_t)Moving_Average_Compute((uint32_t)current_position, &filterStruct);
+	  	result[0] = current_average_position;
 		//uint32_t value =  (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0));// | (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) << 1);
 		//GPIOA->IDR & 0b0000111111111111;
 		//inputs = (value & 0b1);
